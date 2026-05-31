@@ -57,16 +57,29 @@ function UploadCenter() {
     setBusy(false); qc.invalidateQueries(); toast.success("Upload queued");
   };
 
+  const process = useServerFn(processDocument);
+
   const submitText = async () => {
     if (!text.trim() || !title.trim() || !uid || !courseId) return toast.error("Title, text & course required");
     setBusy(true);
-    const { error } = await supabase.from("documents").insert({
+    const { data: ins, error } = await supabase.from("documents").insert({
       user_id: uid, course_id: courseId, title, file_type: "TXT",
-      text_content: text, status: "ready", page_count: Math.ceil(text.length / 2000),
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    setText(""); setTitle(""); qc.invalidateQueries(); toast.success("Saved");
+      text_content: text, status: "processing", page_count: Math.ceil(text.length / 2000),
+    }).select("id").single();
+    if (error || !ins) { setBusy(false); return toast.error(error?.message ?? "Insert failed"); }
+    toast.message("Analyzing with AI…");
+    try {
+      await process({ data: { documentId: ins.id } });
+      toast.success("Document processed — topics, summary & flashcards ready");
+    } catch (e: any) {
+      toast.error(e.message ?? "Processing failed");
+    }
+    setBusy(false); setText(""); setTitle(""); qc.invalidateQueries();
+  };
+
+  const runProcess = async (docId: string) => {
+    try { await process({ data: { documentId: docId } }); toast.success("Processed"); qc.invalidateQueries(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   return (
