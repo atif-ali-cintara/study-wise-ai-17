@@ -72,7 +72,6 @@ function UploadCenter() {
   };
 
 
-  const process = useServerFn(processDocument);
 
   const submitText = async () => {
     if (!text.trim() || !title.trim() || !uid || !courseId) return toast.error("Title, text & course required");
