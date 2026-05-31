@@ -53,13 +53,44 @@ export const processDocument = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: doc } = await supabase.from("documents").select("*").eq("id", data.documentId).single();
     if (!doc) throw new Error("Document not found");
-    if (!doc.text_content || doc.text_content.length < 50) {
+    // Extract text from uploaded file if not already present
+    let textContent = doc.text_content ?? "";
+    if ((!textContent || textContent.length < 50) && doc.file_path) {
+      await supabase.from("documents").update({ status: "processing", processing_progress: 10, error_message: null }).eq("id", doc.id);
+      try {
+        const { data: blob, error: dlErr } = await supabase.storage.from("study-materials").download(doc.file_path);
+        if (dlErr || !blob) throw new Error(dlErr?.message ?? "Download failed");
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        const ext = (doc.file_type ?? doc.file_path.split(".").pop() ?? "").toLowerCase();
+        if (ext === "pdf") {
+          const { extractText, getDocumentProxy } = await import("unpdf");
+          const pdf = await getDocumentProxy(buf);
+          const r = await extractText(pdf, { mergePages: true });
+          textContent = Array.isArray(r.text) ? r.text.join("\n\n") : String(r.text);
+        } else if (ext === "docx") {
+          const mammoth: any = await import("mammoth");
+          const r = await mammoth.extractRawText({ buffer: Buffer.from(buf) });
+          textContent = r.value;
+        } else if (ext === "txt" || ext === "md") {
+          textContent = new TextDecoder().decode(buf);
+        } else {
+          throw new Error(`Unsupported file type: ${ext.toUpperCase()}. Use PDF, DOCX, or TXT — or paste the text directly.`);
+        }
+        textContent = (textContent ?? "").trim();
+        if (textContent.length < 50) throw new Error("Could not extract readable text from this file.");
+        await supabase.from("documents").update({ text_content: textContent, page_count: Math.max(1, Math.ceil(textContent.length / 2000)) }).eq("id", doc.id);
+      } catch (e: any) {
+        await supabase.from("documents").update({ status: "failed", error_message: (e?.message ?? "Extraction failed").slice(0, 500) }).eq("id", doc.id);
+        throw e;
+      }
+    }
+    if (!textContent || textContent.length < 50) {
       await supabase.from("documents").update({ status: "failed", error_message: "No extractable text" }).eq("id", doc.id);
       throw new Error("No text content to process");
     }
-    await supabase.from("documents").update({ status: "processing", processing_progress: 20 }).eq("id", doc.id);
+    await supabase.from("documents").update({ status: "processing", processing_progress: 30 }).eq("id", doc.id);
 
-    const text = doc.text_content.slice(0, 12000);
+    const text = textContent.slice(0, 12000);
     const json = await callAI({
       messages: [
         { role: "system", content: "You extract study structure from documents. Respond ONLY with valid JSON matching the schema. No prose, no markdown fences." },
