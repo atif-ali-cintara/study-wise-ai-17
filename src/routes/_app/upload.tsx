@@ -135,8 +135,11 @@ function UploadCenter() {
           <div key={d.id} className="flex items-center justify-between border-b py-2 last:border-0">
             <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-primary" /><span>{d.title}</span></div>
             <div className="flex items-center gap-2">
-              {d.text_content && d.status !== "ready" && (
+              {d.status !== "ready" && (d.text_content || d.file_path) && (
                 <Button size="sm" variant="ghost" onClick={() => runProcess(d.id)}><Sparkles className="mr-1 h-3 w-3" />Process</Button>
+              )}
+              {d.status === "failed" && d.error_message && (
+                <span className="text-xs text-destructive max-w-[200px] truncate" title={d.error_message}>{d.error_message}</span>
               )}
               <Badge variant={d.status === "ready" ? "default" : d.status === "failed" ? "destructive" : "secondary"}>{d.status}</Badge>
             </div>
