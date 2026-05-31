@@ -40,22 +40,37 @@ function UploadCenter() {
     enabled: !!uid,
   });
 
+  const process = useServerFn(processDocument);
+
   const upload = async (files: FileList | null) => {
     if (!files?.length || !uid || !courseId) return toast.error("Pick a course and a file");
     setBusy(true);
+    const queued: string[] = [];
     for (const f of Array.from(files)) {
       if (f.size > MAX_BYTES) { toast.error(`${f.name} exceeds 100MB`); continue; }
       const path = `${uid}/${Date.now()}-${f.name}`;
       const { error: upErr } = await supabase.storage.from("study-materials").upload(path, f);
       if (upErr) { toast.error(upErr.message); continue; }
-      const { error: insErr } = await supabase.from("documents").insert({
+      const { data: ins, error: insErr } = await supabase.from("documents").insert({
         user_id: uid, course_id: courseId, title: f.name, file_path: path,
-        file_type: f.name.split(".").pop()?.toUpperCase(), file_size: f.size, status: "processing",
-      });
-      if (insErr) toast.error(insErr.message);
+        file_type: f.name.split(".").pop()?.toLowerCase(), file_size: f.size, status: "processing",
+      }).select("id").single();
+      if (insErr) { toast.error(insErr.message); continue; }
+      if (ins) queued.push(ins.id);
     }
-    setBusy(false); qc.invalidateQueries(); toast.success("Upload queued");
+    qc.invalidateQueries();
+    if (queued.length) {
+      toast.message(`Extracting & analyzing ${queued.length} file(s)…`);
+      for (const id of queued) {
+        try { await process({ data: { documentId: id } }); }
+        catch (e: any) { toast.error(`${e.message}`); }
+      }
+      toast.success("Processing complete");
+      qc.invalidateQueries();
+    }
+    setBusy(false);
   };
+
 
   const process = useServerFn(processDocument);
 
