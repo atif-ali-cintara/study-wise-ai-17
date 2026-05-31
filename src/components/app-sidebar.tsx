@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, BookOpen, Upload, Brain, MessageSquare, Search, BarChart3, Sparkles, GraduationCap, LogOut } from "lucide-react";
+import { LayoutDashboard, BookOpen, Upload, Brain, MessageSquare, Search, BarChart3, Sparkles, GraduationCap, LogOut, FileQuestion } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ const mainItems = [
   { title: "Workspace", url: "/workspace", icon: BookOpen },
   { title: "Upload", url: "/upload", icon: Upload },
   { title: "Flashcards", url: "/flashcards", icon: Brain },
+  { title: "Quizzes", url: "/quizzes", icon: FileQuestion },
   { title: "AI Tutor", url: "/tutor", icon: MessageSquare },
   { title: "Search", url: "/search", icon: Search },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
