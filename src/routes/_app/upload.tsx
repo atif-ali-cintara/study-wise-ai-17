@@ -120,7 +120,12 @@ function UploadCenter() {
         {docs?.length ? docs.map((d: any) => (
           <div key={d.id} className="flex items-center justify-between border-b py-2 last:border-0">
             <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-primary" /><span>{d.title}</span></div>
-            <Badge variant={d.status === "ready" ? "default" : d.status === "failed" ? "destructive" : "secondary"}>{d.status}</Badge>
+            <div className="flex items-center gap-2">
+              {d.text_content && d.status !== "ready" && (
+                <Button size="sm" variant="ghost" onClick={() => runProcess(d.id)}><Sparkles className="mr-1 h-3 w-3" />Process</Button>
+              )}
+              <Badge variant={d.status === "ready" ? "default" : d.status === "failed" ? "destructive" : "secondary"}>{d.status}</Badge>
+            </div>
           </div>
         )) : <p className="text-sm text-muted-foreground">No uploads yet.</p>}
       </Card>
