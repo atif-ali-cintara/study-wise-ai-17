@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Upload as UploadIcon, FileText } from "lucide-react";
+import { processDocument } from "@/lib/api/ai.functions";
+import { Upload as UploadIcon, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/upload")({ component: UploadCenter });
@@ -55,16 +57,29 @@ function UploadCenter() {
     setBusy(false); qc.invalidateQueries(); toast.success("Upload queued");
   };
 
+  const process = useServerFn(processDocument);
+
   const submitText = async () => {
     if (!text.trim() || !title.trim() || !uid || !courseId) return toast.error("Title, text & course required");
     setBusy(true);
-    const { error } = await supabase.from("documents").insert({
+    const { data: ins, error } = await supabase.from("documents").insert({
       user_id: uid, course_id: courseId, title, file_type: "TXT",
-      text_content: text, status: "ready", page_count: Math.ceil(text.length / 2000),
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    setText(""); setTitle(""); qc.invalidateQueries(); toast.success("Saved");
+      text_content: text, status: "processing", page_count: Math.ceil(text.length / 2000),
+    }).select("id").single();
+    if (error || !ins) { setBusy(false); return toast.error(error?.message ?? "Insert failed"); }
+    toast.message("Analyzing with AI…");
+    try {
+      await process({ data: { documentId: ins.id } });
+      toast.success("Document processed — topics, summary & flashcards ready");
+    } catch (e: any) {
+      toast.error(e.message ?? "Processing failed");
+    }
+    setBusy(false); setText(""); setTitle(""); qc.invalidateQueries();
+  };
+
+  const runProcess = async (docId: string) => {
+    try { await process({ data: { documentId: docId } }); toast.success("Processed"); qc.invalidateQueries(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   return (
@@ -105,7 +120,12 @@ function UploadCenter() {
         {docs?.length ? docs.map((d: any) => (
           <div key={d.id} className="flex items-center justify-between border-b py-2 last:border-0">
             <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-primary" /><span>{d.title}</span></div>
-            <Badge variant={d.status === "ready" ? "default" : d.status === "failed" ? "destructive" : "secondary"}>{d.status}</Badge>
+            <div className="flex items-center gap-2">
+              {d.text_content && d.status !== "ready" && (
+                <Button size="sm" variant="ghost" onClick={() => runProcess(d.id)}><Sparkles className="mr-1 h-3 w-3" />Process</Button>
+              )}
+              <Badge variant={d.status === "ready" ? "default" : d.status === "failed" ? "destructive" : "secondary"}>{d.status}</Badge>
+            </div>
           </div>
         )) : <p className="text-sm text-muted-foreground">No uploads yet.</p>}
       </Card>

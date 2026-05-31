@@ -17,9 +17,11 @@ import { Route as AppWorkspaceRouteImport } from './routes/_app/workspace'
 import { Route as AppUploadRouteImport } from './routes/_app/upload'
 import { Route as AppTutorRouteImport } from './routes/_app/tutor'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppQuizzesRouteImport } from './routes/_app/quizzes'
 import { Route as AppFlashcardsRouteImport } from './routes/_app/flashcards'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAnalyticsRouteImport } from './routes/_app/analytics'
+import { Route as AppQuizzesQuizIdRouteImport } from './routes/_app/quizzes.$quizId'
 import { Route as AppWorkspaceCourseCourseIdRouteImport } from './routes/_app/workspace/course.$courseId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -61,6 +63,11 @@ const AppSearchRoute = AppSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuizzesRoute = AppQuizzesRouteImport.update({
+  id: '/quizzes',
+  path: '/quizzes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFlashcardsRoute = AppFlashcardsRouteImport.update({
   id: '/flashcards',
   path: '/flashcards',
@@ -76,6 +83,11 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuizzesQuizIdRoute = AppQuizzesQuizIdRouteImport.update({
+  id: '/$quizId',
+  path: '/$quizId',
+  getParentRoute: () => AppQuizzesRoute,
+} as any)
 const AppWorkspaceCourseCourseIdRoute =
   AppWorkspaceCourseCourseIdRouteImport.update({
     id: '/course/$courseId',
@@ -90,10 +102,12 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AppAnalyticsRoute
   '/dashboard': typeof AppDashboardRoute
   '/flashcards': typeof AppFlashcardsRoute
+  '/quizzes': typeof AppQuizzesRouteWithChildren
   '/search': typeof AppSearchRoute
   '/tutor': typeof AppTutorRoute
   '/upload': typeof AppUploadRoute
   '/workspace': typeof AppWorkspaceRouteWithChildren
+  '/quizzes/$quizId': typeof AppQuizzesQuizIdRoute
   '/workspace/course/$courseId': typeof AppWorkspaceCourseCourseIdRoute
 }
 export interface FileRoutesByTo {
@@ -103,10 +117,12 @@ export interface FileRoutesByTo {
   '/analytics': typeof AppAnalyticsRoute
   '/dashboard': typeof AppDashboardRoute
   '/flashcards': typeof AppFlashcardsRoute
+  '/quizzes': typeof AppQuizzesRouteWithChildren
   '/search': typeof AppSearchRoute
   '/tutor': typeof AppTutorRoute
   '/upload': typeof AppUploadRoute
   '/workspace': typeof AppWorkspaceRouteWithChildren
+  '/quizzes/$quizId': typeof AppQuizzesQuizIdRoute
   '/workspace/course/$courseId': typeof AppWorkspaceCourseCourseIdRoute
 }
 export interface FileRoutesById {
@@ -118,10 +134,12 @@ export interface FileRoutesById {
   '/_app/analytics': typeof AppAnalyticsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/flashcards': typeof AppFlashcardsRoute
+  '/_app/quizzes': typeof AppQuizzesRouteWithChildren
   '/_app/search': typeof AppSearchRoute
   '/_app/tutor': typeof AppTutorRoute
   '/_app/upload': typeof AppUploadRoute
   '/_app/workspace': typeof AppWorkspaceRouteWithChildren
+  '/_app/quizzes/$quizId': typeof AppQuizzesQuizIdRoute
   '/_app/workspace/course/$courseId': typeof AppWorkspaceCourseCourseIdRoute
 }
 export interface FileRouteTypes {
@@ -133,10 +151,12 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/dashboard'
     | '/flashcards'
+    | '/quizzes'
     | '/search'
     | '/tutor'
     | '/upload'
     | '/workspace'
+    | '/quizzes/$quizId'
     | '/workspace/course/$courseId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -146,10 +166,12 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/dashboard'
     | '/flashcards'
+    | '/quizzes'
     | '/search'
     | '/tutor'
     | '/upload'
     | '/workspace'
+    | '/quizzes/$quizId'
     | '/workspace/course/$courseId'
   id:
     | '__root__'
@@ -160,10 +182,12 @@ export interface FileRouteTypes {
     | '/_app/analytics'
     | '/_app/dashboard'
     | '/_app/flashcards'
+    | '/_app/quizzes'
     | '/_app/search'
     | '/_app/tutor'
     | '/_app/upload'
     | '/_app/workspace'
+    | '/_app/quizzes/$quizId'
     | '/_app/workspace/course/$courseId'
   fileRoutesById: FileRoutesById
 }
@@ -232,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/quizzes': {
+      id: '/_app/quizzes'
+      path: '/quizzes'
+      fullPath: '/quizzes'
+      preLoaderRoute: typeof AppQuizzesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/flashcards': {
       id: '/_app/flashcards'
       path: '/flashcards'
@@ -253,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/quizzes/$quizId': {
+      id: '/_app/quizzes/$quizId'
+      path: '/$quizId'
+      fullPath: '/quizzes/$quizId'
+      preLoaderRoute: typeof AppQuizzesQuizIdRouteImport
+      parentRoute: typeof AppQuizzesRoute
+    }
     '/_app/workspace/course/$courseId': {
       id: '/_app/workspace/course/$courseId'
       path: '/course/$courseId'
@@ -262,6 +300,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AppQuizzesRouteChildren {
+  AppQuizzesQuizIdRoute: typeof AppQuizzesQuizIdRoute
+}
+
+const AppQuizzesRouteChildren: AppQuizzesRouteChildren = {
+  AppQuizzesQuizIdRoute: AppQuizzesQuizIdRoute,
+}
+
+const AppQuizzesRouteWithChildren = AppQuizzesRoute._addFileChildren(
+  AppQuizzesRouteChildren,
+)
 
 interface AppWorkspaceRouteChildren {
   AppWorkspaceCourseCourseIdRoute: typeof AppWorkspaceCourseCourseIdRoute
@@ -279,6 +329,7 @@ interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppFlashcardsRoute: typeof AppFlashcardsRoute
+  AppQuizzesRoute: typeof AppQuizzesRouteWithChildren
   AppSearchRoute: typeof AppSearchRoute
   AppTutorRoute: typeof AppTutorRoute
   AppUploadRoute: typeof AppUploadRoute
@@ -289,6 +340,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppFlashcardsRoute: AppFlashcardsRoute,
+  AppQuizzesRoute: AppQuizzesRouteWithChildren,
   AppSearchRoute: AppSearchRoute,
   AppTutorRoute: AppTutorRoute,
   AppUploadRoute: AppUploadRoute,
