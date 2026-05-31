@@ -86,7 +86,7 @@ export const processDocument = createServerFn({ method: "POST" })
     // Summary
     if (parsed.summary) {
       await supabase.from("summaries").insert({
-        user_id: userId, document_id: doc.id, type: "concise", content: String(parsed.summary).slice(0, 8000),
+        user_id: userId, document_id: doc.id, type: "quick", content: String(parsed.summary).slice(0, 8000),
       });
     }
 
