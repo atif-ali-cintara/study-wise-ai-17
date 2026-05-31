@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { chatTutor } from "@/lib/api/ai.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/tutor")({ component: Tutor });
