@@ -4,15 +4,23 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpen, Plus, FolderOpen } from "lucide-react";
+import { BookOpen, Plus, FolderOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/workspace")({ component: Workspace });
+
+type DialogKind = null | "subject" | "course";
 
 function Workspace() {
   const { user } = useAuth();
@@ -25,21 +33,58 @@ function Workspace() {
     enabled: !!uid,
   });
 
+  const [dialog, setDialog] = useState<DialogKind>(null);
   const [subjectName, setSubjectName] = useState("");
   const [courseName, setCourseName] = useState("");
+  const [topicName, setTopicName] = useState("");
   const [courseSubject, setCourseSubject] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const close = () => {
+    setDialog(null);
+    setSubjectName(""); setCourseName(""); setTopicName(""); setCourseSubject("");
+  };
 
   const createSubject = async () => {
     if (!subjectName.trim() || !uid) return;
-    const { error } = await supabase.from("subjects").insert({ user_id: uid, name: subjectName });
+    setBusy(true);
+    const { error } = await supabase.from("subjects").insert({ user_id: uid, name: subjectName.trim() });
+    setBusy(false);
     if (error) return toast.error(error.message);
-    setSubjectName(""); qc.invalidateQueries({ queryKey: ["subjects"] }); toast.success("Subject created");
+    qc.invalidateQueries({ queryKey: ["subjects"] });
+    toast.success("Subject created");
+    close();
   };
+
   const createCourse = async () => {
-    if (!courseName.trim() || !courseSubject || !uid) return;
-    const { error } = await supabase.from("courses").insert({ user_id: uid, subject_id: courseSubject, name: courseName });
-    if (error) return toast.error(error.message);
-    setCourseName(""); qc.invalidateQueries({ queryKey: ["subjects"] }); toast.success("Course created");
+    if (!courseName.trim() || !courseSubject || !uid) {
+      return toast.error("Pick a subject and enter a course name");
+    }
+    setBusy(true);
+    const { data: course, error } = await supabase
+      .from("courses")
+      .insert({ user_id: uid, subject_id: courseSubject, name: courseName.trim() })
+      .select("id")
+      .single();
+    if (error || !course) {
+      setBusy(false);
+      return toast.error(error?.message ?? "Could not create course");
+    }
+    if (topicName.trim()) {
+      const { error: tErr } = await supabase.from("topics").insert({
+        user_id: uid,
+        course_id: course.id,
+        name: topicName.trim(),
+      });
+      if (tErr) {
+        setBusy(false);
+        return toast.error(tErr.message);
+      }
+    }
+    setBusy(false);
+    qc.invalidateQueries({ queryKey: ["subjects"] });
+    toast.success(topicName.trim() ? "Course and topic created" : "Course created");
+    close();
   };
 
   return (
@@ -47,34 +92,55 @@ function Workspace() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold">Workspace</h1>
-          <p className="text-muted-foreground">Subjects → Courses → Documents</p>
+          <p className="text-muted-foreground">Subjects → Courses → Topics</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild><Button variant="outline" className="gap-2"><Plus className="h-4 w-4" />Subject</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>New subject</DialogTitle></DialogHeader>
-              <Label>Name</Label>
-              <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="e.g. Computer Science" />
-              <Button onClick={createSubject}>Create</Button>
-            </DialogContent>
-          </Dialog>
-          <Dialog>
-            <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" />Course</Button></DialogTrigger>
-            <DialogContent className="space-y-3">
-              <DialogHeader><DialogTitle>New course</DialogTitle></DialogHeader>
-              <div><Label>Subject</Label>
-                <Select value={courseSubject} onValueChange={setCourseSubject}>
-                  <SelectTrigger><SelectValue placeholder="Pick subject" /></SelectTrigger>
-                  <SelectContent>{subjects?.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Course name</Label><Input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g. Deep Learning" /></div>
-              <Button onClick={createCourse}>Create</Button>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" /> Create <ChevronDown className="h-3 w-3 opacity-70" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setDialog("course")}>New course</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDialog("subject")}>New subject</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <Dialog open={dialog === "subject"} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="space-y-3">
+          <DialogHeader><DialogTitle>New subject</DialogTitle></DialogHeader>
+          <div>
+            <Label>Subject name</Label>
+            <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="e.g. Computer Science" />
+          </div>
+          <Button onClick={createSubject} disabled={busy}>{busy ? "Creating…" : "Create subject"}</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={dialog === "course"} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="space-y-3">
+          <DialogHeader><DialogTitle>New course</DialogTitle></DialogHeader>
+          <div>
+            <Label>Subject</Label>
+            <Select value={courseSubject} onValueChange={setCourseSubject}>
+              <SelectTrigger><SelectValue placeholder={subjects?.length ? "Pick subject" : "Create a subject first"} /></SelectTrigger>
+              <SelectContent>
+                {subjects?.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Course Name</Label>
+            <Input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g. Principles of Management" />
+          </div>
+          <div>
+            <Label>Topic Name <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Input value={topicName} onChange={(e) => setTopicName(e.target.value)} placeholder="e.g. Chapter 1: Planning" />
+          </div>
+          <Button onClick={createCourse} disabled={busy}>{busy ? "Creating…" : "Create course"}</Button>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-6">
         {subjects?.map((s: any) => (
