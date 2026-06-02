@@ -73,7 +73,27 @@ function TakeQuiz() {
     toast.success(`Scored ${score}/${questions.length}`);
   };
 
-  if (!quiz || !questions) return <div className="p-6 text-muted-foreground">Loading…</div>;
+  if (quizLoading || qLoading) return <div className="p-6 text-muted-foreground">Loading…</div>;
+  if (quizError || qError) return (
+    <Card className="mx-auto max-w-2xl p-8 text-center">
+      <p className="text-destructive">Could not load quiz: {(quizError || qError)?.message}</p>
+      <Button variant="outline" className="mt-4" onClick={() => nav({ to: "/quizzes" })}>Back to quizzes</Button>
+    </Card>
+  );
+  if (!quiz) return (
+    <Card className="mx-auto max-w-2xl p-8 text-center">
+      <p className="text-muted-foreground">Quiz not found.</p>
+      <Button variant="outline" className="mt-4" onClick={() => nav({ to: "/quizzes" })}>Back to quizzes</Button>
+    </Card>
+  );
+  if (!questions?.length) return (
+    <Card className="mx-auto max-w-2xl p-8 text-center">
+      <h2 className="font-display text-xl font-semibold">{quiz.title}</h2>
+      <p className="mt-2 text-muted-foreground">This quiz has no questions yet. The AI may have failed to generate them — try creating a new quiz from a processed document.</p>
+      <Button variant="outline" className="mt-4" onClick={() => nav({ to: "/quizzes" })}>Back to quizzes</Button>
+    </Card>
+  );
+
 
   if (submitted && result) {
     return (
