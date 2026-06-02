@@ -21,14 +21,24 @@ function TakeQuiz() {
   const [submitted, setSubmitted] = useState(false);
   const [startedAt] = useState(Date.now());
 
-  const { data: quiz } = useQuery({
+  const { data: quiz, isLoading: quizLoading, error: quizError } = useQuery({
     queryKey: ["quiz", quizId],
-    queryFn: async () => (await supabase.from("quizzes").select("*").eq("id", quizId).single()).data,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("quizzes").select("*").eq("id", quizId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
-  const { data: questions } = useQuery({
+  const { data: questions, isLoading: qLoading, error: qError } = useQuery({
     queryKey: ["quiz-q", quizId],
-    queryFn: async () => (await supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("position")).data ?? [],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("position");
+      if (error) throw error;
+      return data ?? [];
+    },
   });
+
+
 
   const current = questions?.[idx];
   const total = questions?.length ?? 0;
